@@ -114,7 +114,92 @@ Error responses follow the OpenAI structure with two Notebooks-specific addition
 
 ## Using OpenAI SDKs
 
-The Notebooks API works with OpenAI SDKs out of the box. Point the client at the Notebooks base URL and pass Notebooks-specific fields via `extra_body` (Python) or the second options argument (Node.js).
+The Notebooks API endpoint is `/v1/chat/completions` — the same path the OpenAI SDK calls by default. Just point the client at the Notebooks base URL and it works.
+
+### Option A: Headers (recommended)
+
+Set Notebooks-specific params as default headers on the client. This means you configure `nodeId` and other settings once, then call the API exactly like you would OpenAI — no `extra_body` or second arguments needed on every request.
+
+| Header | Body equivalent |
+| --- | --- |
+| `x-notebooks-node-id` | `nodeId` |
+| `x-notebooks-brand-voice-id` | `brandVoiceId` |
+| `x-notebooks-agent-mode` | `isAgentMode` (`"true"` / `"false"`) |
+| `x-notebooks-search-online` | `isSearchOnline` (`"true"` / `"false"`) |
+| `x-notebooks-max-steps` | `maxSteps` (integer as string) |
+| `x-notebooks-system-prompt` | `systemPrompt` |
+
+<CodeGroup>
+
+```python OpenAI SDK (Python)
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="nb_sk_your_key_here",
+    base_url="https://dashboard.notebooks.app/api/v1",
+    default_headers={
+        "x-notebooks-node-id": "YOUR_NODE_ID",
+    },
+)
+
+# Call exactly like standard OpenAI — no extra_body needed
+response = client.chat.completions.create(
+    model="anthropic/claude-sonnet-4.6",
+    messages=[
+        {"role": "user", "content": "What are the key trends?"}
+    ],
+)
+
+print(response.choices[0].message.content)
+```
+
+```typescript OpenAI SDK (Node.js)
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "nb_sk_your_key_here",
+  baseURL: "https://dashboard.notebooks.app/api/v1",
+  defaultHeaders: {
+    "x-notebooks-node-id": "YOUR_NODE_ID",
+  },
+});
+
+// Call exactly like standard OpenAI — no extra body needed
+const response = await client.chat.completions.create({
+  model: "anthropic/claude-sonnet-4.6",
+  messages: [
+    { role: "user", content: "What are the key trends?" },
+  ],
+});
+
+console.log(response.choices[0].message.content);
+```
+
+```typescript Vercel AI SDK
+import { createOpenAI } from "@ai-sdk/openai";
+import { generateText } from "ai";
+
+const notebooks = createOpenAI({
+  apiKey: "nb_sk_your_key_here",
+  baseURL: "https://dashboard.notebooks.app/api/v1",
+  headers: {
+    "x-notebooks-node-id": "YOUR_NODE_ID",
+  },
+});
+
+const { text } = await generateText({
+  model: notebooks("anthropic/claude-sonnet-4.6"),
+  prompt: "What are the key trends?",
+});
+
+console.log(text);
+```
+
+</CodeGroup>
+
+### Option B: Request body
+
+Alternatively, pass Notebooks-specific fields in the request body on each call via `extra_body` (Python) or the second options argument (Node.js).
 
 <CodeGroup>
 

@@ -11,11 +11,11 @@
   },
   "servers": [
     {
-      "url": "https://dashboard.notebooks.app/api/v1",
+      "url": "https://dashboard.notebooks.app/api",
       "description": "Production"
     },
     {
-      "url": "http://localhost:3000/api/v1",
+      "url": "http://localhost:3000/api",
       "description": "Local development"
     }
   ],
@@ -108,7 +108,7 @@
               "$ref": "#/components/schemas/Message"
             },
             "minItems": 1,
-            "description": "A list of messages comprising the conversation so far."
+            "description": "A list of messages comprising the conversation so far. Must include at least one user message."
           },
           "model": {
             "type": "string",
@@ -238,7 +238,7 @@
     "parameters": {}
   },
   "paths": {
-    "/v1/chat": {
+    "/v1/chat/completions": {
       "post": {
         "summary": "Create a chat completion",
         "description": "Send a conversation to the AI and receive a response. Supports both streaming (SSE) and non-streaming modes. The model will use your notebook node as context and can optionally search the web and use agent tools.",
