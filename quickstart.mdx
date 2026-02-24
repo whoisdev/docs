@@ -20,13 +20,18 @@ description: "Make your first Notebooks API call in under 2 minutes."
   Store your key somewhere safe. You won't be able to see it again after you leave the page.
 </Warning>
 
-## Step 2: Find your node ID
+## Step 2: Get your node ID
 
 Every API request needs a `nodeId` — this tells the AI which notebook node to use as context.
 
-1. Open a notebook in your dashboard.
-2. Click on a node.
-3. Copy the node ID from the URL or node settings.
+1. Open a notebook in your [dashboard](https://dashboard.notebooks.app).
+2. Connect the documents and sources you want the AI to have access to.
+3. Click **API** in the toolbar at the bottom of the node.
+4. Copy your **Node ID** from the API Access panel. You'll also see your **Brand Voice ID** here if you have one set up, and a ready-to-use example request.
+
+<Warning>
+  Deleting a node in your notebook will permanently disable API access for that `nodeId`. Any requests using a deleted node's ID will fail.
+</Warning>
 
 ## Step 3: Install an SDK
 
@@ -168,6 +173,53 @@ You'll get back a standard OpenAI `ChatCompletion` response:
 ```
 
 If you've used the OpenAI API before, this will feel familiar — the response format is identical.
+
+## Important: the API is stateless
+
+The Notebooks API does **not** store your conversation history. Each request is independent — it won't see previous messages from other requests, and it won't add messages to the conversation in your dashboard.
+
+This means:
+
+- **You manage the conversation.** To build a multi-turn chatbot, store messages in your own database and send the full conversation in the `messages` array with each request.
+- **The `nodeId` provides document context, not chat history.** It gives the model access to your notebook's connected documents — not to any past conversations you've had in the Notebooks app.
+- **Each request starts fresh.** The model only knows what you send in the current request's `messages` array.
+
+<Info>
+  **Need server-side conversation storage?** If you'd like the API to save and reference conversations by ID instead of managing messages yourself, reach out to [support](mailto:dev@notebooks.app). We can give you access to a newer endpoint that supports conversation persistence.
+</Info>
+
+```python
+# Example: managing a multi-turn conversation
+conversation = [
+    {"role": "user", "content": "What are the key trends in my niche?"},
+]
+
+# First request
+response = client.chat.completions.create(
+    model="anthropic/claude-sonnet-4.6",
+    messages=conversation,
+    extra_body={"nodeId": "YOUR_NODE_ID"},
+)
+
+# Add the assistant's reply to your conversation
+conversation.append({
+    "role": "assistant",
+    "content": response.choices[0].message.content,
+})
+
+# Add the next user message
+conversation.append({
+    "role": "user",
+    "content": "Tell me more about the first trend.",
+})
+
+# Second request — send the full conversation
+response = client.chat.completions.create(
+    model="anthropic/claude-sonnet-4.6",
+    messages=conversation,
+    extra_body={"nodeId": "YOUR_NODE_ID"},
+)
+```
 
 ## What's next?
 

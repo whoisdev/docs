@@ -158,6 +158,26 @@ Higher values mean the model *can* take more steps, not that it *will*. The mode
   Each tool-calling step adds latency before the response starts. If speed matters more than depth, lower `maxSteps` or disable agent mode entirely.
 </Tip>
 
+## Custom tools are not supported
+
+The Notebooks API manages tools server-side — you cannot define your own tools or function calls. The available tools (document search, web search) are controlled by the `isAgentMode` and `isSearchOnline` parameters.
+
+If you need custom tool calling, use the model provider's API directly:
+
+- [Anthropic Claude — Tool Use](https://docs.anthropic.com/en/docs/build-with-claude/tool-use/overview)
+- [OpenAI — Function Calling](https://platform.openai.com/docs/guides/function-calling)
+- [Google Gemini — Function Calling](https://ai.google.dev/gemini-api/docs/function-calling)
+
+## Model capabilities pass through
+
+The Notebooks API does **not** expand or modify the underlying capabilities of any model. If a model has a limitation — for example, it doesn't support streaming with tool calls, or it doesn't support structured output — that same limitation applies through the Notebooks API.
+
+We recommend reading the provider documentation for the model you're using to understand its capabilities and limitations:
+
+- [Anthropic Claude docs](https://docs.anthropic.com)
+- [OpenAI docs](https://platform.openai.com/docs)
+- [Google Gemini docs](https://ai.google.dev/gemini-api/docs)
+
 ## Streaming with agent mode
 
 When streaming is enabled with agent mode, the model completes all tool calls first, then streams the final response text. You won't see intermediate tool results — only the final answer as it's generated.

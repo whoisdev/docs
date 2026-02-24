@@ -24,7 +24,7 @@ These fields are unique to the Notebooks API:
 
 | Field | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `nodeId` | `string` (UUID) | Yes | — | The notebook node to use as context. The model reads your connected documents. |
+| `nodeId` | `string` (UUID) | Yes | — | The notebook node to use as context. Provides access to connected documents — not chat history. See [quickstart](/quickstart#important-the-api-is-stateless). |
 | `isAgentMode` | `boolean` | No | `true` | Enable multi-step agent reasoning with tool use (document search, web search). |
 | `isSearchOnline` | `boolean` | No | `true` | Allow the model to search the web for current information. |
 | `maxSteps` | `integer` | No | `10` | Max tool-calling steps in agent mode (1–25). Higher = more thorough but slower. |
