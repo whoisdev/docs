@@ -1,80 +1,184 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Make your first Notebooks API call in under 2 minutes."
 ---
 
-## Get started in three steps
+<Info>
+  **Prerequisites:**
+  - A [Notebooks account](https://dashboard.notebooks.app) with an active subscription
+  - An API key (you'll create one below)
+  - A notebook with at least one node (you'll need its `nodeId`)
+</Info>
 
-Get your documentation site running locally and make your first customization.
+## Step 1: Create an API key
 
-### Step 1: Set up your local environment
+1. Go to [Settings > API](https://dashboard.notebooks.app/dashboard/settings/api) in your dashboard.
+2. Click **Create API Key**.
+3. Copy the key. It starts with `nb_sk_` and you'll only see it once.
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+<Warning>
+  Store your key somewhere safe. You won't be able to see it again after you leave the page.
+</Warning>
 
-### Step 2: Deploy your changes
+## Step 2: Find your node ID
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+Every API request needs a `nodeId` — this tells the AI which notebook node to use as context.
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+1. Open a notebook in your dashboard.
+2. Click on a node.
+3. Copy the node ID from the URL or node settings.
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+## Step 3: Install an SDK
 
-### Step 3: Go live
+The Notebooks API is OpenAI-compatible, so you can use the OpenAI SDK or the Vercel AI SDK.
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+<CodeGroup>
 
-## Next steps
+```bash OpenAI SDK (Python)
+pip install openai
+```
 
-Now that you have your docs running, explore these key features:
+```bash OpenAI SDK (Node.js)
+npm install openai
+```
 
-<CardGroup cols={2}>
+```bash Vercel AI SDK
+npm install ai @ai-sdk/openai
+```
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+</CodeGroup>
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+## Step 4: Make your first request
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+Replace `YOUR_API_KEY` and `YOUR_NODE_ID` below and run the code:
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+<CodeGroup>
 
-</CardGroup>
+```python OpenAI SDK (Python)
+from openai import OpenAI
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+client = OpenAI(
+    api_key="YOUR_API_KEY",
+    base_url="https://dashboard.notebooks.app/api/v1",
+)
+
+response = client.chat.completions.create(
+    model="anthropic/claude-sonnet-4.6",
+    messages=[
+        {"role": "user", "content": "Summarize the key topics in this notebook."}
+    ],
+    extra_body={
+        "nodeId": "YOUR_NODE_ID",
+    },
+)
+
+print(response.choices[0].message.content)
+```
+
+```typescript OpenAI SDK (Node.js)
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "YOUR_API_KEY",
+  baseURL: "https://dashboard.notebooks.app/api/v1",
+});
+
+const response = await client.chat.completions.create(
+  {
+    model: "anthropic/claude-sonnet-4.6",
+    messages: [
+      { role: "user", content: "Summarize the key topics in this notebook." },
+    ],
+  },
+  {
+    body: {
+      nodeId: "YOUR_NODE_ID",
+    },
+  }
+);
+
+console.log(response.choices[0].message.content);
+```
+
+```typescript Vercel AI SDK
+import { createOpenAI } from "@ai-sdk/openai";
+import { generateText } from "ai";
+
+const notebooks = createOpenAI({
+  apiKey: "YOUR_API_KEY",
+  baseURL: "https://dashboard.notebooks.app/api/v1",
+});
+
+const { text } = await generateText({
+  model: notebooks("anthropic/claude-sonnet-4.6"),
+  prompt: "Summarize the key topics in this notebook.",
+  providerOptions: {
+    openai: {
+      nodeId: "YOUR_NODE_ID",
+    },
+  },
+});
+
+console.log(text);
+```
+
+```bash curl
+curl -X POST https://dashboard.notebooks.app/api/v1/chat \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "anthropic/claude-sonnet-4.6",
+    "nodeId": "YOUR_NODE_ID",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Summarize the key topics in this notebook."
+      }
+    ]
+  }'
+```
+
+</CodeGroup>
+
+## Step 5: See the response
+
+You'll get back a standard OpenAI `ChatCompletion` response:
+
+```json
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "model": "anthropic/claude-sonnet-4.6",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Based on your notebook, here are the key topics..."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1250,
+    "completion_tokens": 340,
+    "total_tokens": 1590
+  }
+}
+```
+
+If you've used the OpenAI API before, this will feel familiar — the response format is identical.
+
+## What's next?
+
+<Columns cols={3}>
+  <Card title="Authentication" icon="key" href="/authentication">
+    Secure your API keys properly.
+  </Card>
+  <Card title="Models" icon="microchip" href="/models">
+    Pick the right model for your use case.
+  </Card>
+  <Card title="Streaming" icon="bolt" href="/streaming">
+    Get real-time responses with SSE streaming.
+  </Card>
+</Columns>

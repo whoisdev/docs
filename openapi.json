@@ -1,0 +1,411 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Notebooks API",
+    "version": "1.0.0",
+    "description": "The Notebooks API lets you integrate AI-powered marketing intelligence into your applications. Use it to chat with AI models that have access to your notebook context, web search, and agent tools.",
+    "contact": {
+      "name": "Notebooks Support",
+      "url": "https://notebooks.app"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://dashboard.notebooks.app/api/v1",
+      "description": "Production"
+    },
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Chat",
+      "description": "Create AI chat completions with notebook context."
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key authentication. Generate keys at https://dashboard.notebooks.app/dashboard/settings/api. Keys start with `nb_sk_`."
+      }
+    },
+    "schemas": {
+      "Message": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "system"
+            ],
+            "description": "The role of the message author.",
+            "example": "user"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The content of the message.",
+            "example": "What are the top trending topics in my niche?"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ]
+      },
+      "ResponseFormat": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "json_schema"
+            ],
+            "description": "Must be 'json_schema' for structured outputs."
+          },
+          "json_schema": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "A name for the schema, used for identification.",
+                "example": "research_summary"
+              },
+              "strict": {
+                "type": "boolean",
+                "description": "If true, the model must strictly follow the schema. Defaults to false."
+              },
+              "schema": {
+                "type": "object",
+                "additionalProperties": {},
+                "description": "The JSON Schema object that the response must conform to."
+              }
+            },
+            "required": [
+              "name",
+              "schema"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "json_schema"
+        ],
+        "description": "Force the model to return structured JSON matching a specific schema. Only supported by select models."
+      },
+      "ChatRequest": {
+        "type": "object",
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            },
+            "minItems": 1,
+            "description": "A list of messages comprising the conversation so far."
+          },
+          "model": {
+            "type": "string",
+            "enum": [
+              "anthropic/claude-sonnet-4.5",
+              "anthropic/claude-sonnet-4.6",
+              "anthropic/claude-haiku-4.5",
+              "anthropic/claude-opus-4.6",
+              "google/gemini-3.1-pro-preview",
+              "google/gemini-3-pro-preview",
+              "google/gemini-3-flash-preview",
+              "openai/gpt-5-thinking",
+              "openai/gpt-5.2",
+              "openai/gpt-5-nano",
+              "openai/gpt-4.1-mini",
+              "x-ai/grok-4-fast"
+            ],
+            "description": "The model to use for completion. See the model list for available options.",
+            "example": "anthropic/claude-sonnet-4.6"
+          },
+          "nodeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The ID of the notebook node to use as context for this conversation.",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "stream": {
+            "type": "boolean",
+            "default": false,
+            "description": "If true, returns a streaming SSE response. If false, returns a single JSON response.",
+            "example": false
+          },
+          "isAgentMode": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable agent mode for multi-step reasoning with tool use. Disable for simple, direct responses."
+          },
+          "isSearchOnline": {
+            "type": "boolean",
+            "default": true,
+            "description": "Allow the model to search the web for up-to-date information when needed."
+          },
+          "maxSteps": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25,
+            "default": 10,
+            "description": "Maximum number of agentic tool-calling steps before returning a response. Default is 10.",
+            "example": 10
+          },
+          "brandVoiceId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The ID of a brand voice to apply when creating content. The model will retrieve and follow these style guidelines.",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "systemPrompt": {
+            "type": "string",
+            "maxLength": 4000,
+            "description": "An optional custom system prompt to guide the model's behavior. Max 4000 characters.",
+            "example": "You are a helpful marketing assistant focused on YouTube content strategy."
+          },
+          "response_format": {
+            "$ref": "#/components/schemas/ResponseFormat"
+          }
+        },
+        "required": [
+          "messages",
+          "model",
+          "nodeId"
+        ]
+      },
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string",
+                "description": "A human-readable error message with actionable guidance."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "authentication_error",
+                  "invalid_request_error",
+                  "rate_limit_error",
+                  "insufficient_credits",
+                  "server_error"
+                ],
+                "description": "The type of error."
+              },
+              "code": {
+                "type": "string",
+                "enum": [
+                  "missing_api_key",
+                  "invalid_api_key",
+                  "invalid_request_body",
+                  "rate_limit_exceeded",
+                  "insufficient_credits",
+                  "no_subscription",
+                  "internal_error"
+                ],
+                "description": "A machine-readable error code."
+              },
+              "param": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The parameter that caused the error, if applicable."
+              }
+            },
+            "required": [
+              "message",
+              "type",
+              "code"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/v1/chat": {
+      "post": {
+        "summary": "Create a chat completion",
+        "description": "Send a conversation to the AI and receive a response. Supports both streaming (SSE) and non-streaming modes. The model will use your notebook node as context and can optionally search the web and use agent tools.",
+        "tags": [
+          "Chat"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "The chat completion request.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response. Returns a chat completion object (non-streaming) or an SSE stream (streaming).",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Maximum requests per minute."
+              },
+              "X-RateLimit-Remaining": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Remaining requests in the current window."
+              },
+              "X-RateLimit-Reset": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Unix timestamp (ms) when the rate limit resets."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "example": "chatcmpl-abc123"
+                    },
+                    "object": {
+                      "type": "string",
+                      "enum": [
+                        "chat.completion"
+                      ]
+                    },
+                    "model": {
+                      "type": "string",
+                      "example": "anthropic/claude-sonnet-4.6"
+                    },
+                    "choices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "index": {
+                            "type": "integer"
+                          },
+                          "message": {
+                            "type": "object",
+                            "properties": {
+                              "role": {
+                                "type": "string",
+                                "enum": [
+                                  "assistant"
+                                ]
+                              },
+                              "content": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "finish_reason": {
+                            "type": "string",
+                            "enum": [
+                              "stop",
+                              "length"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "usage": {
+                      "type": "object",
+                      "properties": {
+                        "credits_used": {
+                          "type": "number",
+                          "example": 2.5
+                        }
+                      }
+                    },
+                    "credits_remaining": {
+                      "type": "number",
+                      "example": 97.5
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body — validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed — missing or invalid API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient credits or no active subscription.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

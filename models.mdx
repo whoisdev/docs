@@ -1,0 +1,98 @@
+---
+title: "Models"
+description: "Explore the AI models available through the Notebooks API — from fast and cheap to frontier reasoning."
+---
+
+The Notebooks API gives you access to models from four providers through a single endpoint. Pass the model ID as the `model` parameter in your request.
+
+```json
+{
+  "model": "anthropic/claude-sonnet-4.6",
+  "messages": [...]
+}
+```
+
+## Anthropic
+
+| Model ID | Name | Best for | Tier |
+| --- | --- | --- | --- |
+| `anthropic/claude-sonnet-4.6` | Claude Sonnet 4.6 | Frontier-level tasks, coding, analysis | Premium |
+| `anthropic/claude-sonnet-4.5` | Claude Sonnet 4.5 | Technical tasks, deep analysis | Premium |
+| `anthropic/claude-opus-4.6` | Claude Opus 4.6 | Complex reasoning, nuanced writing | Premium |
+| `anthropic/claude-haiku-4.5` | Claude Haiku 4.5 | Fast everyday tasks, affordable | Standard |
+
+## Google
+
+| Model ID | Name | Best for | Tier |
+| --- | --- | --- | --- |
+| `google/gemini-3.1-pro-preview` | Gemini 3.1 Pro | Frontier reasoning, multimodal tasks | Premium |
+| `google/gemini-3-pro-preview` | Gemini 3 Pro | Deep analysis, complex queries | Premium |
+| `google/gemini-3-flash-preview` | Gemini 3 Flash | Fast responses, everyday tasks | Standard |
+
+## OpenAI
+
+| Model ID | Name | Best for | Tier |
+| --- | --- | --- | --- |
+| `openai/gpt-5.2` | GPT 5.2 | Adaptive reasoning, complex tasks | Premium |
+| `openai/gpt-5-thinking` | GPT 5 Thinking | Step-by-step problem solving | Premium |
+| `openai/gpt-5-nano` | GPT 5 Nano | Quick everyday tasks | Premium |
+| `openai/gpt-4.1-mini` | GPT 4.1 Mini | Fast and affordable | Budget |
+
+## X-AI
+
+| Model ID | Name | Best for | Tier |
+| --- | --- | --- | --- |
+| `x-ai/grok-4-fast` | Grok 4 Fast | General purpose, everyday tasks | Budget |
+
+## Pricing tiers
+
+Models are grouped into three pricing tiers that affect how many credits each request uses:
+
+| Tier | Credit cost | When to use |
+| --- | --- | --- |
+| **Budget** | Lowest | High-volume tasks, simple queries, prototyping |
+| **Standard** | Moderate | Everyday use, general Q&A, content generation |
+| **Premium** | Highest | Complex reasoning, deep analysis, production-critical tasks |
+
+Check your credit balance in your [dashboard](https://dashboard.notebooks.app/dashboard/settings/billing).
+
+## Choosing a model
+
+<AccordionGroup>
+  <Accordion title="I want the best quality" icon="trophy" defaultOpen>
+    Use `anthropic/claude-sonnet-4.6`, `google/gemini-3.1-pro-preview`, or `openai/gpt-5.2`. These are frontier models with the strongest reasoning and writing.
+  </Accordion>
+
+  <Accordion title="I want fast and cheap" icon="bolt">
+    Use `anthropic/claude-haiku-4.5`, `x-ai/grok-4-fast`, or `openai/gpt-4.1-mini`. Great for high-volume use cases where speed matters more than depth.
+  </Accordion>
+
+  <Accordion title="I want step-by-step thinking" icon="brain">
+    Use `openai/gpt-5-thinking`. This model shows its reasoning process, which is useful for math, logic, and complex problem-solving.
+  </Accordion>
+
+  <Accordion title="I'm not sure — just pick one" icon="shuffle">
+    Start with `anthropic/claude-sonnet-4.6`. It's a strong default with excellent quality across coding, writing, and analysis tasks.
+  </Accordion>
+</AccordionGroup>
+
+## Brand Voice
+
+Pass a `brandVoiceId` to make any model write in your brand's tone and style. Create brand voices in your [dashboard](https://dashboard.notebooks.app), then reference them by ID:
+
+```json
+{
+  "model": "anthropic/claude-sonnet-4.6",
+  "nodeId": "YOUR_NODE_ID",
+  "brandVoiceId": "YOUR_BRAND_VOICE_ID",
+  "messages": [
+    { "role": "user", "content": "Write a blog intro about AI trends." }
+  ]
+}
+```
+
+The model will retrieve your brand voice guidelines and apply them to the response. This works with all models and is especially useful for content generation workflows.
+
+<Warning>
+  The `brandVoiceId` must be a valid brand voice that belongs to your account. If the ID doesn't exist or you don't have access, the API will return an error.
+</Warning>

@@ -1,33 +1,104 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: "API Reference"
+description: "Complete reference for all Notebooks API endpoints."
 ---
 
-<Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
-</Note>
+The Notebooks API follows REST conventions and uses JSON for requests and responses.
 
-## Welcome
+## Base URL
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
-
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+```
+https://dashboard.notebooks.app/api/v1
+```
 
 ## Authentication
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
+All endpoints require a Bearer token in the `Authorization` header:
+
+```
+Authorization: Bearer nb_sk_your_key_here
+```
+
+Create API keys in your [dashboard](https://dashboard.notebooks.app/dashboard/settings/api). See the [authentication guide](/authentication) for details.
+
+## Content type
+
+All requests must include:
+
+```
+Content-Type: application/json
+```
+
+## Rate limits
+
+You can make up to **30 requests per minute** per API key. The API returns rate limit info in response headers:
+
+| Header | Description |
+| --- | --- |
+| `X-RateLimit-Limit` | Maximum requests per minute |
+| `X-RateLimit-Remaining` | Requests remaining in the current window |
+| `X-RateLimit-Reset` | Unix timestamp (ms) when the limit resets |
+
+If you exceed the limit, you'll receive a `429` status code. Wait until the reset time before retrying.
+
+## Credits
+
+Every API request consumes credits from your account. The amount depends on the model used and tokens consumed. Different [pricing tiers](/models#pricing-tiers) have different credit costs.
+
+The response includes standard OpenAI token usage:
 
 ```json
-"security": [
-  {
-    "bearerAuth": []
+{
+  "usage": {
+    "prompt_tokens": 1250,
+    "completion_tokens": 340,
+    "total_tokens": 1590
   }
-]
+}
 ```
+
+Check your balance and top up at [Settings > Billing](https://dashboard.notebooks.app/dashboard/settings/billing).
+
+## Error format
+
+All errors follow a consistent structure:
+
+```json
+{
+  "error": {
+    "message": "A human-readable description of what went wrong.",
+    "type": "authentication_error",
+    "code": "invalid_api_key",
+    "param": null
+  }
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `message` | What went wrong and how to fix it |
+| `type` | Error category: `authentication_error`, `invalid_request_error`, `rate_limit_error`, `insufficient_credits`, `server_error` |
+| `code` | Machine-readable code: `missing_api_key`, `invalid_api_key`, `invalid_request_body`, `rate_limit_exceeded`, `insufficient_credits`, `no_subscription`, `internal_error` |
+| `param` | The request parameter that caused the error (if applicable) |
+
+## HTTP status codes
+
+| Status | Meaning |
+| --- | --- |
+| `200` | Success |
+| `400` | Invalid request body — check the `param` field for details |
+| `401` | Authentication failed — missing or invalid API key |
+| `403` | Insufficient credits or no active subscription |
+| `404` | Node not found or you don't have access to it |
+| `429` | Rate limit exceeded — wait and retry |
+| `500` | Internal server error — try again or contact support |
+
+## OpenAPI spec
+
+The full OpenAPI 3.1 specification is available at:
+
+```
+https://dashboard.notebooks.app/api/v1/openapi.json
+```
+
+You can use this spec with any OpenAPI-compatible tool to generate client libraries, test endpoints, or explore the API.

@@ -1,0 +1,165 @@
+---
+title: "Agent Mode"
+description: "Let the model search your documents and the web to give more accurate, grounded responses."
+---
+
+By default, the Notebooks API runs in **agent mode** — the model can take multiple steps to search your notebook documents and the web before writing its final response. This means answers are grounded in your actual data, not just the model's training knowledge.
+
+## How it works
+
+When agent mode is enabled, the model can:
+
+1. **Search your documents** — The model queries your notebook's connected documents to find relevant context. This uses your notebook node's content as a knowledge base.
+2. **Search the web** — The model searches the internet for up-to-date information when your question needs current data.
+
+The model decides which tools to use based on your message. For a question about your notebook content, it'll search your documents. For a question about recent events, it'll search the web. It can use both in a single request.
+
+## Configuration
+
+Three parameters control agent behavior:
+
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `isAgentMode` | `true` | Enable or disable agent mode entirely. |
+| `isSearchOnline` | `true` | Allow web search. Only works when `isAgentMode` is `true`. |
+| `maxSteps` | `10` | Maximum tool-calling rounds before the model must respond (1–25). |
+
+## Examples
+
+### Default: full agent mode
+
+The model can search your documents and the web. This gives the best quality answers.
+
+<CodeGroup>
+
+```python OpenAI SDK (Python)
+response = client.chat.completions.create(
+    model="anthropic/claude-sonnet-4.6",
+    messages=[
+        {"role": "user", "content": "What are the latest trends in my niche?"}
+    ],
+    extra_body={
+        "nodeId": "YOUR_NODE_ID",
+        # isAgentMode defaults to True
+        # isSearchOnline defaults to True
+    },
+)
+```
+
+```typescript OpenAI SDK (Node.js)
+const response = await client.chat.completions.create(
+  {
+    model: "anthropic/claude-sonnet-4.6",
+    messages: [
+      { role: "user", content: "What are the latest trends in my niche?" },
+    ],
+  },
+  {
+    body: {
+      nodeId: "YOUR_NODE_ID",
+      // isAgentMode defaults to true
+      // isSearchOnline defaults to true
+    },
+  }
+);
+```
+
+</CodeGroup>
+
+### Documents only (no web search)
+
+The model searches your notebook but won't access the internet. Useful when you want answers based only on your own data.
+
+<CodeGroup>
+
+```python OpenAI SDK (Python)
+response = client.chat.completions.create(
+    model="anthropic/claude-sonnet-4.6",
+    messages=[
+        {"role": "user", "content": "Summarize the main themes in my research."}
+    ],
+    extra_body={
+        "nodeId": "YOUR_NODE_ID",
+        "isSearchOnline": False,
+    },
+)
+```
+
+```typescript OpenAI SDK (Node.js)
+const response = await client.chat.completions.create(
+  {
+    model: "anthropic/claude-sonnet-4.6",
+    messages: [
+      { role: "user", content: "Summarize the main themes in my research." },
+    ],
+  },
+  {
+    body: {
+      nodeId: "YOUR_NODE_ID",
+      isSearchOnline: false,
+    },
+  }
+);
+```
+
+</CodeGroup>
+
+### Direct mode (no tools)
+
+The model responds immediately without searching anything. Fastest time-to-first-token, but the model only uses the conversation history — no notebook context, no web results.
+
+<CodeGroup>
+
+```python OpenAI SDK (Python)
+response = client.chat.completions.create(
+    model="anthropic/claude-sonnet-4.6",
+    messages=[
+        {"role": "user", "content": "Rewrite this headline to be more engaging: 'Q3 Results'"}
+    ],
+    extra_body={
+        "nodeId": "YOUR_NODE_ID",
+        "isAgentMode": False,
+    },
+)
+```
+
+```typescript OpenAI SDK (Node.js)
+const response = await client.chat.completions.create(
+  {
+    model: "anthropic/claude-sonnet-4.6",
+    messages: [
+      { role: "user", content: "Rewrite this headline to be more engaging: 'Q3 Results'" },
+    ],
+  },
+  {
+    body: {
+      nodeId: "YOUR_NODE_ID",
+      isAgentMode: false,
+    },
+  }
+);
+```
+
+</CodeGroup>
+
+## Tuning `maxSteps`
+
+The `maxSteps` parameter controls how many tool-calling rounds the model can take. Each step is one tool call and response cycle.
+
+| Value | Behavior |
+| --- | --- |
+| `1–3` | Quick lookup — one or two searches, then respond. Fastest. |
+| `5–10` | Balanced (default range). Good for most use cases. |
+| `10–25` | Deep research — multiple searches, cross-referencing. Slower but more thorough. |
+
+Higher values mean the model *can* take more steps, not that it *will*. The model stops early when it has enough information.
+
+<Tip>
+  Each tool-calling step adds latency before the response starts. If speed matters more than depth, lower `maxSteps` or disable agent mode entirely.
+</Tip>
+
+## Streaming with agent mode
+
+When streaming is enabled with agent mode, the model completes all tool calls first, then streams the final response text. You won't see intermediate tool results — only the final answer as it's generated.
+
+See the [streaming guide](/streaming) for code examples.

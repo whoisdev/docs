@@ -1,0 +1,193 @@
+---
+title: "Structured Output"
+description: "Force the model to return JSON matching a specific schema using response_format."
+---
+
+Sometimes you need structured data instead of free-form text — for example, extracting entities, generating product descriptions in a fixed format, or feeding results into another system. The `response_format` parameter forces the model to return valid JSON matching your schema.
+
+## Basic usage
+
+Add a `response_format` object to your request with a JSON Schema definition:
+
+<CodeGroup>
+
+```python OpenAI SDK (Python)
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="YOUR_API_KEY",
+    base_url="https://dashboard.notebooks.app/api/v1",
+)
+
+response = client.chat.completions.create(
+    model="anthropic/claude-sonnet-4.6",
+    messages=[
+        {"role": "user", "content": "List 3 blog post ideas about AI in marketing."}
+    ],
+    response_format={
+        "type": "json_schema",
+        "json_schema": {
+            "name": "blog_ideas",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "ideas": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "title": {"type": "string"},
+                                "summary": {"type": "string"},
+                                "target_audience": {"type": "string"}
+                            },
+                            "required": ["title", "summary", "target_audience"]
+                        }
+                    }
+                },
+                "required": ["ideas"]
+            }
+        }
+    },
+    extra_body={
+        "nodeId": "YOUR_NODE_ID",
+    },
+)
+
+import json
+data = json.loads(response.choices[0].message.content)
+print(data["ideas"][0]["title"])
+```
+
+```typescript OpenAI SDK (Node.js)
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "YOUR_API_KEY",
+  baseURL: "https://dashboard.notebooks.app/api/v1",
+});
+
+const response = await client.chat.completions.create(
+  {
+    model: "anthropic/claude-sonnet-4.6",
+    messages: [
+      { role: "user", content: "List 3 blog post ideas about AI in marketing." },
+    ],
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "blog_ideas",
+        strict: true,
+        schema: {
+          type: "object",
+          properties: {
+            ideas: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  summary: { type: "string" },
+                  target_audience: { type: "string" },
+                },
+                required: ["title", "summary", "target_audience"],
+              },
+            },
+          },
+          required: ["ideas"],
+        },
+      },
+    },
+  },
+  {
+    body: {
+      nodeId: "YOUR_NODE_ID",
+    },
+  }
+);
+
+const data = JSON.parse(response.choices[0].message.content!);
+console.log(data.ideas[0].title);
+```
+
+```bash curl
+curl -X POST https://dashboard.notebooks.app/api/v1/chat \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "anthropic/claude-sonnet-4.6",
+    "nodeId": "YOUR_NODE_ID",
+    "messages": [
+      { "role": "user", "content": "List 3 blog post ideas about AI in marketing." }
+    ],
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "blog_ideas",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "ideas": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "summary": { "type": "string" },
+                  "target_audience": { "type": "string" }
+                },
+                "required": ["title", "summary", "target_audience"]
+              }
+            }
+          },
+          "required": ["ideas"]
+        }
+      }
+    }
+  }'
+```
+
+</CodeGroup>
+
+## Example response
+
+The model returns a standard `ChatCompletion` where `choices[0].message.content` is a JSON string matching your schema:
+
+```json
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "model": "anthropic/claude-sonnet-4.6",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"ideas\":[{\"title\":\"How AI Is Rewriting the Content Marketing Playbook\",\"summary\":\"Explore how AI tools are shifting content strategy from volume-based to quality-based approaches.\",\"target_audience\":\"Content marketing managers\"},{\"title\":\"Personalization at Scale: AI-Driven Email Campaigns\",\"summary\":\"How machine learning models can tailor email copy and timing to individual subscriber behavior.\",\"target_audience\":\"Email marketers and growth teams\"},{\"title\":\"The ROI of AI in Paid Ads: What the Data Shows\",\"summary\":\"A data-driven look at how AI-optimized ad copy and targeting affects campaign performance.\",\"target_audience\":\"PPC specialists and media buyers\"}]}"
+      },
+      "finish_reason": "stop"
+    }
+  ]
+}
+```
+
+<Info>
+  The `content` field is always a JSON **string**. You need to parse it with `JSON.parse()` (JavaScript) or `json.loads()` (Python) to get the actual object.
+</Info>
+
+## Schema parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `type` | `string` | Yes | Must be `"json_schema"`. |
+| `json_schema.name` | `string` | Yes | A name for your schema (used for identification). |
+| `json_schema.strict` | `boolean` | No | If `true`, the model must strictly follow the schema. Defaults to `false`. |
+| `json_schema.schema` | `object` | Yes | A standard [JSON Schema](https://json-schema.org/) object defining the expected shape. |
+
+## Tips
+
+- **Keep schemas simple.** Deeply nested or very large schemas may reduce output quality. Flatten where possible.
+- **Use `strict: true`** when you need guaranteed structure (e.g., feeding into a database or another API).
+- **Add descriptions** to your schema properties to guide the model on what each field should contain.
+- **Parse the response** — the `content` field is a JSON string, not an object.

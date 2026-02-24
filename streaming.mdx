@@ -1,0 +1,147 @@
+---
+title: "Streaming"
+description: "Receive AI responses in real-time using Server-Sent Events (SSE)."
+---
+
+When you set `stream: true`, the API returns a Server-Sent Events (SSE) stream instead of waiting for the full response. This lets you show text to the user as it's generated — just like ChatGPT or Claude.
+
+## Event format
+
+The stream uses the standard OpenAI SSE format. Each event is a line starting with `data: ` followed by a JSON object:
+
+```
+data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","model":"anthropic/claude-sonnet-4.6","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","model":"anthropic/claude-sonnet-4.6","choices":[{"index":0,"delta":{"content":"Based"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","model":"anthropic/claude-sonnet-4.6","choices":[{"index":0,"delta":{"content":" on"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","model":"anthropic/claude-sonnet-4.6","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]
+```
+
+Each chunk contains:
+- `choices[0].delta.content` — the next piece of text (may be empty on the first and last chunk)
+- `choices[0].finish_reason` — `null` while streaming, `"stop"` when complete
+- The final event is always `data: [DONE]`
+
+## Code examples
+
+<CodeGroup>
+
+```python OpenAI SDK (Python)
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="YOUR_API_KEY",
+    base_url="https://dashboard.notebooks.app/api/v1",
+)
+
+stream = client.chat.completions.create(
+    model="anthropic/claude-sonnet-4.6",
+    messages=[
+        {"role": "user", "content": "Summarize my notebook."}
+    ],
+    stream=True,
+    extra_body={
+        "nodeId": "YOUR_NODE_ID",
+    },
+)
+
+for chunk in stream:
+    content = chunk.choices[0].delta.content
+    if content:
+        print(content, end="", flush=True)
+
+print()  # Final newline
+```
+
+```typescript OpenAI SDK (Node.js)
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "YOUR_API_KEY",
+  baseURL: "https://dashboard.notebooks.app/api/v1",
+});
+
+const stream = await client.chat.completions.create(
+  {
+    model: "anthropic/claude-sonnet-4.6",
+    messages: [
+      { role: "user", content: "Summarize my notebook." },
+    ],
+    stream: true,
+  },
+  {
+    body: {
+      nodeId: "YOUR_NODE_ID",
+    },
+  }
+);
+
+for await (const chunk of stream) {
+  const content = chunk.choices[0]?.delta?.content || "";
+  process.stdout.write(content);
+}
+```
+
+```typescript Vercel AI SDK
+import { createOpenAI } from "@ai-sdk/openai";
+import { streamText } from "ai";
+
+const notebooks = createOpenAI({
+  apiKey: "YOUR_API_KEY",
+  baseURL: "https://dashboard.notebooks.app/api/v1",
+});
+
+const { textStream } = streamText({
+  model: notebooks("anthropic/claude-sonnet-4.6"),
+  prompt: "Summarize my notebook.",
+  providerOptions: {
+    openai: {
+      nodeId: "YOUR_NODE_ID",
+    },
+  },
+});
+
+for await (const text of textStream) {
+  process.stdout.write(text);
+}
+```
+
+```bash curl
+curl -X POST https://dashboard.notebooks.app/api/v1/chat \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "anthropic/claude-sonnet-4.6",
+    "nodeId": "YOUR_NODE_ID",
+    "stream": true,
+    "messages": [
+      { "role": "user", "content": "Summarize my notebook." }
+    ]
+  }'
+```
+
+</CodeGroup>
+
+## Streaming with agent mode
+
+When `isAgentMode: true` (the default), the model may make multiple tool calls (searching your documents, searching the web) before responding. During streaming, you'll see the text arrive in real-time as the model generates its final response after completing tool calls.
+
+The `maxSteps` parameter controls how many tool-calling rounds the model can do before it must respond. Each step may add latency before text starts streaming.
+
+<Tip>
+  If you want the fastest time-to-first-token, set `isAgentMode: false` to skip tool calls. The model will respond using only the context provided with the request.
+</Tip>
+
+## Response headers
+
+Streaming responses include the same rate limit headers as non-streaming:
+
+| Header | Description |
+| --- | --- |
+| `X-RateLimit-Limit` | Maximum requests per minute (30) |
+| `X-RateLimit-Remaining` | Requests remaining in the current window |
+| `X-RateLimit-Reset` | Unix timestamp (ms) when the limit resets |

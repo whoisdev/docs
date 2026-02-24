@@ -1,0 +1,198 @@
+---
+title: "OpenAI Compatibility"
+description: "Understand what's compatible with the OpenAI API, what's custom to Notebooks, and what's not supported."
+---
+
+The Notebooks API is designed to be familiar if you've worked with the OpenAI Chat Completions API. The **response format is 100% OpenAI-compatible** — the same `ChatCompletion` object, the same SSE streaming format. The request format extends OpenAI with Notebooks-specific fields.
+
+## Request fields
+
+### OpenAI-compatible fields
+
+These fields work the same way as the OpenAI API:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `messages` | `Message[]` | Array of `{role, content}` messages. Roles: `user`, `assistant`, `system` |
+| `model` | `string` | Model ID (uses Notebooks model IDs like `anthropic/claude-sonnet-4.6`) |
+| `stream` | `boolean` | Enable SSE streaming. Default: `false` |
+| `response_format` | `object` | Structured JSON output via `json_schema` format |
+
+### Notebooks-specific fields
+
+These fields are unique to the Notebooks API:
+
+| Field | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `nodeId` | `string` (UUID) | Yes | — | The notebook node to use as context. The model reads your connected documents. |
+| `isAgentMode` | `boolean` | No | `true` | Enable multi-step agent reasoning with tool use (document search, web search). |
+| `isSearchOnline` | `boolean` | No | `true` | Allow the model to search the web for current information. |
+| `maxSteps` | `integer` | No | `10` | Max tool-calling steps in agent mode (1–25). Higher = more thorough but slower. |
+| `brandVoiceId` | `string` (UUID) | No | — | Apply a brand voice to guide the model's tone and style. Create brand voices in your dashboard. |
+| `systemPrompt` | `string` | No | — | Custom system prompt (max 4,000 chars). In OpenAI, you'd use a `system` message instead. |
+
+### Not supported
+
+The Notebooks API is built for content creation and research workflows. These OpenAI fields are **not available**:
+
+| Field | Why |
+| --- | --- |
+| `temperature` | The API optimizes temperature per model internally |
+| `max_tokens` | Managed server-side based on model capabilities |
+| `top_p` | Not exposed — optimized internally |
+| `tools` / `functions` | Tools are managed server-side (document search + web search). You can't define custom tools. |
+| `tool_choice` | Controlled by `isAgentMode` and `isSearchOnline` instead |
+| `file` / `file_ids` | File uploads are not supported. Use notebook nodes for context. |
+| `logprobs` | Not supported |
+| `n` | Always returns 1 choice |
+
+<Info>
+  **Why no custom tools?** Notebooks is designed for content creation — the API provides purpose-built tools for searching your documents and the web. Custom tool definitions may be supported in a future version based on usage and demand.
+</Info>
+
+## Response format
+
+### Non-streaming
+
+The response is a standard OpenAI `ChatCompletion` object:
+
+```json
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "model": "anthropic/claude-sonnet-4.6",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Here's what I found in your notebook..."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1250,
+    "completion_tokens": 340,
+    "total_tokens": 1590
+  }
+}
+```
+
+### Streaming
+
+SSE chunks follow the OpenAI `chat.completion.chunk` format:
+
+```
+data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}]}
+```
+
+See the [streaming guide](/streaming) for full details and code examples.
+
+## Error format
+
+Error responses follow the OpenAI structure with two Notebooks-specific additions:
+
+```json
+{
+  "error": {
+    "message": "Human-readable error message.",
+    "type": "authentication_error",
+    "code": "invalid_api_key",
+    "param": null
+  }
+}
+```
+
+| Error type | OpenAI equivalent | Notes |
+| --- | --- | --- |
+| `authentication_error` | `authentication_error` | Same |
+| `invalid_request_error` | `invalid_request_error` | Same |
+| `rate_limit_error` | `rate_limit_error` | Same |
+| `server_error` | `api_error` | OpenAI calls this `api_error` |
+| `insufficient_credits` | — | Notebooks-specific (no OpenAI equivalent) |
+
+## Using OpenAI SDKs
+
+The Notebooks API works with OpenAI SDKs out of the box. Point the client at the Notebooks base URL and pass Notebooks-specific fields via `extra_body` (Python) or the second options argument (Node.js).
+
+<CodeGroup>
+
+```python OpenAI SDK (Python)
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="nb_sk_your_key_here",
+    base_url="https://dashboard.notebooks.app/api/v1",
+)
+
+# Pass Notebooks-specific fields via extra_body
+response = client.chat.completions.create(
+    model="anthropic/claude-sonnet-4.6",
+    messages=[
+        {"role": "user", "content": "What are the key trends?"}
+    ],
+    extra_body={
+        "nodeId": "YOUR_NODE_ID",
+        "isAgentMode": True,
+        "isSearchOnline": True,
+    },
+)
+
+print(response.choices[0].message.content)
+```
+
+```typescript OpenAI SDK (Node.js)
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "nb_sk_your_key_here",
+  baseURL: "https://dashboard.notebooks.app/api/v1",
+});
+
+// Pass Notebooks-specific fields via the second argument
+const response = await client.chat.completions.create(
+  {
+    model: "anthropic/claude-sonnet-4.6",
+    messages: [
+      { role: "user", content: "What are the key trends?" },
+    ],
+  },
+  {
+    body: {
+      nodeId: "YOUR_NODE_ID",
+      isAgentMode: true,
+      isSearchOnline: true,
+    },
+  }
+);
+
+console.log(response.choices[0].message.content);
+```
+
+```typescript Vercel AI SDK
+import { createOpenAI } from "@ai-sdk/openai";
+import { generateText } from "ai";
+
+const notebooks = createOpenAI({
+  apiKey: "nb_sk_your_key_here",
+  baseURL: "https://dashboard.notebooks.app/api/v1",
+});
+
+// Pass Notebooks-specific fields via providerOptions
+const { text } = await generateText({
+  model: notebooks("anthropic/claude-sonnet-4.6"),
+  prompt: "What are the key trends?",
+  providerOptions: {
+    openai: {
+      nodeId: "YOUR_NODE_ID",
+      isAgentMode: true,
+      isSearchOnline: true,
+    },
+  },
+});
+
+console.log(text);
+```
+
+</CodeGroup>
